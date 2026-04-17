@@ -143,7 +143,7 @@ export const logsData = [
     raw: {
       event: "api_key_create",
       requestId: "req_XXAF92",
-      keyPrefix: "sk_live_",
+      keyPrefix: "public_key_",
     },
   },
   {
