@@ -1,20 +1,24 @@
 import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
-import MainLayout from "../layouts/MainLayout";
+import { useAuth } from "../context/AuthContext";
+import AdminLayout from "../layouts/AdminLayout";
+import UserLayout from "../layouts/UserLayout";
 
 const LoginPage = lazy(() => import("../pages/LoginPage"));
 const RegisterPage = lazy(() => import("../pages/RegisterPage"));
-const DashboardPage = lazy(() => import("../pages/DashboardPage"));
-const UploadPage = lazy(() => import("../pages/UploadPage"));
-const SecurityPage = lazy(() => import("../pages/SecurityPage"));
-const AttackPage = lazy(() => import("../pages/AttackPage"));
-const AIPage = lazy(() => import("../pages/AIPage"));
-const LogsPage = lazy(() => import("../pages/LogsPage"));
-const LogDetailPage = lazy(() => import("../pages/LogDetailPage"));
-const SettingsPage = lazy(() => import("../pages/SettingsPage"));
-const MyFilesPage = lazy(() => import("../pages/MyFilesPage"));
-const SecurityStatusPage = lazy(() => import("../pages/SecurityStatusPage"));
-const ProfileSettingsPage = lazy(() => import("../pages/ProfileSettingsPage"));
+const AdminDashboardPage = lazy(() => import("../pages/admin/AdminDashboardPage"));
+const AdminUsersPage = lazy(() => import("../pages/admin/AdminUsersPage"));
+const AdminLogsPage = lazy(() => import("../pages/admin/AdminLogsPage"));
+const AdminThreatsPage = lazy(() => import("../pages/admin/AdminThreatsPage"));
+const AdminUploadActivityPage = lazy(() => import("../pages/admin/AdminUploadActivityPage"));
+const AdminSettingsPage = lazy(() => import("../pages/admin/AdminSettingsPage"));
+const UserDashboardPage = lazy(() => import("../pages/user/UserDashboardPage"));
+const UserUploadPage = lazy(() => import("../pages/user/UserUploadPage"));
+const UserFilesPage = lazy(() => import("../pages/user/UserFilesPage"));
+const UserSecurityPage = lazy(() => import("../pages/user/UserSecurityPage"));
+const UserProfilePage = lazy(() => import("../pages/user/UserProfilePage"));
+const UserSettingsPage = lazy(() => import("../pages/user/UserSettingsPage"));
+const NotFoundPage = lazy(() => import("../pages/NotFoundPage"));
 
 function RouteFallback() {
   return (
@@ -25,28 +29,62 @@ function RouteFallback() {
 }
 
 export default function AppRoutes() {
+  const { isAuthenticated, role } = useAuth();
+  const homePath = role === "admin" ? "/admin/dashboard" : "/user/dashboard";
+
   return (
     <Suspense fallback={<RouteFallback />}>
       <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<Navigate to={isAuthenticated ? homePath : "/login"} replace />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
-        <Route element={<MainLayout />}>
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/upload" element={<UploadPage />} />
-          <Route path="/security" element={<SecurityPage />} />
-          <Route path="/attack" element={<AttackPage />} />
-          <Route path="/ai" element={<AIPage />} />
-          <Route path="/logs" element={<LogsPage />} />
-          <Route path="/logs/:id" element={<LogDetailPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/my-files" element={<MyFilesPage />} />
-          <Route path="/security-status" element={<SecurityStatusPage />} />
-          <Route path="/profile-settings" element={<ProfileSettingsPage />} />
+        <Route
+          path="/admin"
+          element={
+            isAuthenticated ? (
+              role === "admin" ? (
+                <AdminLayout />
+              ) : (
+                <Navigate to="/user/dashboard" replace />
+              )
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        >
+          <Route path="dashboard" element={<AdminDashboardPage />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="logs" element={<AdminLogsPage />} />
+          <Route path="threats" element={<AdminThreatsPage />} />
+          <Route path="uploads" element={<AdminUploadActivityPage />} />
+          <Route path="settings" element={<AdminSettingsPage />} />
         </Route>
 
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route
+          path="/user"
+          element={
+            isAuthenticated ? (
+              role === "user" ? (
+                <UserLayout />
+              ) : (
+                <Navigate to="/admin/dashboard" replace />
+              )
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        >
+          <Route path="dashboard" element={<UserDashboardPage />} />
+          <Route path="upload" element={<UserUploadPage />} />
+          <Route path="files" element={<UserFilesPage />} />
+          <Route path="security" element={<UserSecurityPage />} />
+          <Route path="profile" element={<UserProfilePage />} />
+          <Route path="settings" element={<UserSettingsPage />} />
+        </Route>
+
+        <Route path="/not-found" element={<NotFoundPage />} />
+        <Route path="*" element={<Navigate to="/not-found" replace />} />
       </Routes>
     </Suspense>
   );

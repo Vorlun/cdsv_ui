@@ -28,7 +28,7 @@ const adminSections = [
     title: "Security",
     items: [
       { label: "Security Visualizer", path: "/security", icon: Network },
-      { label: "AI Analysis", path: "/ai", icon: Brain },
+      { label: "AI Analysis", path: "/ai-analysis", icon: Brain },
     ],
   },
   {
@@ -47,7 +47,7 @@ const userSections = [
       { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
       { label: "Upload", path: "/upload", icon: Upload },
       { label: "My Files", path: "/my-files", icon: Activity },
-      { label: "Profile Settings", path: "/profile-settings", icon: UserCircle2 },
+      { label: "Profile", path: "/profile", icon: UserCircle2 },
     ],
   },
   {

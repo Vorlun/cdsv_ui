@@ -17,6 +17,36 @@ body {
   min-height: 100vh;
 }
 
+html,
+body,
+#root,
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #38bdf8 #0b1220;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: linear-gradient(180deg, #0b1220, #0f172a);
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #22d3ee, #3b82f6 45%, #1d4ed8);
+  border-radius: 9999px;
+  border: 1px solid #0f172a;
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.25);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #67e8f9, #60a5fa 45%, #2563eb);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.35);
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -30,4 +60,57 @@ body {
 
 .animate-fadeIn {
   animation: fadeIn 0.5s ease-out;
+}
+
+@layer components {
+  .cdsv-page {
+    @apply relative overflow-hidden p-6 md:p-8;
+  }
+
+  .cdsv-card {
+    @apply rounded-[18px] border border-white/10 bg-[#0F172A]/90 p-4;
+    box-shadow: 0 0 16px rgba(59, 130, 246, 0.08);
+    transition: transform 180ms ease, border-color 180ms ease, filter 180ms ease;
+  }
+
+  .cdsv-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(59, 130, 246, 0.38);
+  }
+
+  .cdsv-btn-primary {
+    @apply rounded-xl bg-[#3B82F6] px-4 py-2 text-sm font-medium text-white transition;
+    transition-duration: 180ms;
+  }
+
+  .cdsv-btn-primary:hover {
+    filter: brightness(1.08);
+    transform: scale(1.02);
+  }
+
+  .cdsv-btn-primary:active {
+    transform: scale(0.98);
+  }
+
+  .cdsv-btn-secondary {
+    @apply rounded-xl border border-white/15 bg-[#111827] px-4 py-2 text-sm font-medium text-[#E5E7EB] transition;
+    transition-duration: 180ms;
+  }
+
+  .cdsv-btn-secondary:hover {
+    @apply bg-white/10;
+    transform: scale(1.02);
+  }
+
+  .cdsv-btn-secondary:active {
+    transform: scale(0.98);
+  }
+
+  .cdsv-input {
+    @apply h-10 rounded-xl border border-white/10 bg-[#0B1220] px-3 text-sm text-[#E5E7EB] outline-none transition;
+  }
+
+  .cdsv-input:focus {
+    @apply border-[#3B82F6]/60 ring-2 ring-[#3B82F6]/25;
+  }
 }

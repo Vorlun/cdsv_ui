@@ -18,6 +18,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import { logsData } from "../data/logsData";
+import { useAuth } from "../context/AuthContext";
 
 const routeTitles = {
   "/dashboard": "Dashboard",
@@ -25,14 +26,16 @@ const routeTitles = {
   "/security": "Security Visualizer",
   "/security-status": "Security Status",
   "/attack": "Attack Simulation",
-  "/ai": "AI Analysis",
+  "/ai-analysis": "AI Analysis",
   "/logs": "Activity Logs",
   "/settings": "Settings",
+  "/profile": "Profile",
   "/my-files": "My Files",
   "/profile-settings": "Profile Settings",
 };
 
 export default function TopNavbar({ role, onMenuClick }) {
+  const { logout } = useAuth();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const title =
@@ -400,7 +403,7 @@ export default function TopNavbar({ role, onMenuClick }) {
                   exit={{ opacity: 0, y: 8 }}
                   className="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-white/10 bg-[#0F172A]/95 p-2 shadow-2xl backdrop-blur"
                 >
-                  <Link to={role === "admin" ? "/settings" : "/profile-settings"} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[#E5E7EB] hover:bg-white/10" onClick={() => setProfileOpen(false)}>
+                  <Link to="/profile" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[#E5E7EB] hover:bg-white/10" onClick={() => setProfileOpen(false)}>
                     <User className="h-4 w-4" /> Profile
                   </Link>
                   <Link to="/settings" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[#E5E7EB] hover:bg-white/10" onClick={() => setProfileOpen(false)}>
@@ -436,7 +439,7 @@ export default function TopNavbar({ role, onMenuClick }) {
                   <button
                     type="button"
                     onClick={() => {
-                      window.localStorage.removeItem("cdsv-role");
+                      logout();
                       setProfileOpen(false);
                       navigate("/login");
                     }}
