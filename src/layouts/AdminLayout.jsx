@@ -1,50 +1,45 @@
 import { useMemo, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
-import {
-  LayoutDashboard,
-  Users,
-  ScrollText,
-  ShieldAlert,
-  UploadCloud,
-  Settings,
-} from "lucide-react";
-import AppSidebar from "../components/AppSidebar";
-import AppTopbar from "../components/AppTopbar";
-
-const sections = [
-  {
-    title: "Admin",
-    items: [
-      { label: "Dashboard", path: "/admin/dashboard", icon: LayoutDashboard },
-      { label: "Users", path: "/admin/users", icon: Users },
-      { label: "Logs", path: "/admin/logs", icon: ScrollText },
-      { label: "Threat Monitor", path: "/admin/threats", icon: ShieldAlert },
-      { label: "Upload Activity", path: "/admin/uploads", icon: UploadCloud },
-      { label: "Settings", path: "/admin/settings", icon: Settings },
-    ],
-  },
-];
+import AppSidebar, { readInitialCollapsed } from "@/components/AppSidebar";
+import AppTopbar from "@/components/AppTopbar";
+import { useWorkspaceControl } from "@/context/WorkspaceControlContext";
+import { ADMIN_NAV_SECTIONS, resolvePageTitle } from "@/config/navigation";
 
 export default function AdminLayout() {
-  const [open, setOpen] = useState(false);
+  const { isLight } = useWorkspaceControl();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() =>
+    typeof window !== "undefined" ? readInitialCollapsed("admin") : false,
+  );
   const location = useLocation();
-  const title = useMemo(() => {
-    const found = sections[0].items.find((item) => item.path === location.pathname);
-    return found?.label || "Admin Panel";
-  }, [location.pathname]);
+  const title = useMemo(() => resolvePageTitle(location.pathname, "admin"), [location.pathname]);
+  const mainGutter = sidebarCollapsed ? "lg:ml-[4.5rem]" : "lg:ml-64";
 
   return (
-    <div className="h-screen overflow-hidden bg-[#0B0F1A] text-[#E5E7EB]">
+    <div
+      className={`workspace-shell h-screen overflow-hidden transition-colors duration-200 ${
+        isLight ? "bg-slate-100 text-slate-900" : "bg-[#0B0F1A] text-[#E5E7EB]"
+      }`}
+    >
       <AppSidebar
+        persistNamespace="admin"
         title="CDSV Admin"
         subtitle="Threat Operations"
-        sections={sections}
-        isOpen={open}
-        onClose={() => setOpen(false)}
+        sections={ADMIN_NAV_SECTIONS}
+        isOpen={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={setSidebarCollapsed}
+        isLight={isLight}
       />
-      <div className="ml-0 flex h-screen flex-col lg:ml-64">
-        <AppTopbar title={title} onMenuClick={() => setOpen(true)} />
-        <main className="flex-1 overflow-y-auto pt-[72px]">
+      <div className={["ml-0 flex h-screen flex-col transition-[margin] duration-200 ease-out", mainGutter].join(" ")}>
+        <AppTopbar title={title} onMenuClick={() => setMobileOpen(true)} />
+        <main
+          id="main-content"
+          role="main"
+          tabIndex={-1}
+          className="flex-1 overflow-y-auto pt-[72px] outline-none focus-visible:ring-2 focus-visible:ring-[#38bdf8]/40"
+        >
           <Outlet />
         </main>
       </div>

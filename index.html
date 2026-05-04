@@ -1,6 +1,11 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <script>
+      try {
+        if (localStorage.getItem("cdsv-theme") === "light") document.documentElement.dataset.theme = "light";
+      } catch (e) {}
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CDSV Security Platform</title>

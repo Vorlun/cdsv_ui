@@ -1,5 +1,14 @@
-import AppRoutes from "./routes/AppRoutes";
+import WorkspaceShellOverlays from "@/components/workspace/WorkspaceChrome";
+import { WorkspaceControlProvider } from "@/context/WorkspaceControlContext";
+import AppRoutes from "@/routes/AppRoutes";
 
 export default function App() {
-  return <AppRoutes />;
+  return (
+    <WorkspaceControlProvider>
+      <>
+        <AppRoutes />
+        <WorkspaceShellOverlays />
+      </>
+    </WorkspaceControlProvider>
+  );
 }

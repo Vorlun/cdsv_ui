@@ -1,4 +1,4 @@
-import { DataFlow } from "../app/components/cdsv/DataFlow";
+import { DataFlow } from "@/components/cdsv/DataFlow";
 
 export default function SecurityPage() {
   return <DataFlow />;

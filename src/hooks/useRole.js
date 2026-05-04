@@ -1,25 +1,20 @@
 import { useMemo } from "react";
-import { useAuth } from "../context/AuthContext";
+import { useAuthSession } from "@/features/auth/context/AuthContext";
 
-const allowedRoles = ["admin", "user"];
+/** @typedef {"admin"|"user"} Role */
 
+/**
+ * Sidebar/navigation persona for layouts that operate outside guarded routes.
+ * Unauthenticated callers default to the least-privileged UI surface (`user`).
+ * @returns {Role}
+ */
 export default function useRole() {
-  const auth = useAuth();
-  const role = useMemo(() => {
-    if (auth?.isAuthenticated && auth.role) {
-      return auth.role;
-    }
-    if (typeof window === "undefined") {
-      return "admin";
-    }
+  const { isAuthenticated, role } = useAuthSession();
 
-    const storedRole = window.localStorage.getItem("cdsv-role")?.toLowerCase();
-    if (storedRole && allowedRoles.includes(storedRole)) {
-      return storedRole;
+  return useMemo(() => {
+    if (isAuthenticated && (role === "admin" || role === "user")) {
+      return role;
     }
-
-    return "admin";
-  }, [auth?.isAuthenticated, auth?.role]);
-
-  return role;
+    return "user";
+  }, [isAuthenticated, role]);
 }

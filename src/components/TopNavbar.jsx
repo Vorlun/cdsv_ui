@@ -18,7 +18,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import { logsData } from "../data/logsData";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "@/features/auth/context/AuthContext";
 
 const routeTitles = {
   "/dashboard": "Dashboard",

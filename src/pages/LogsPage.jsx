@@ -1,4 +1,4 @@
-import { ActivityLogs } from "../app/components/cdsv/ActivityLogs";
+import { ActivityLogs } from "@/components/cdsv/ActivityLogs";
 
 export default function LogsPage() {
   return <ActivityLogs />;

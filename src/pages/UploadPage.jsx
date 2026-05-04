@@ -1,4 +1,4 @@
-import { FileUpload } from "../app/components/cdsv/FileUpload";
+import { FileUpload } from "@/components/cdsv/FileUpload";
 
 export default function UploadPage() {
   return <FileUpload />;

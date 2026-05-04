@@ -1,9 +1,9 @@
 import { useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AlertTriangle, ArrowLeft, Globe, Shield, User } from "lucide-react";
-import { Card } from "../app/components/cdsv/Card";
-import { Button } from "../app/components/cdsv/Button";
-import { Badge } from "../app/components/cdsv/Badge";
+import { Card } from "@/components/cdsv/Card";
+import { Button } from "@/components/cdsv/Button";
+import { Badge } from "@/components/cdsv/Badge";
 import { logsData } from "../data/logsData";
 
 export default function LogDetailPage() {

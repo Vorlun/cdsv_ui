@@ -15,11 +15,13 @@ export default function ActionMenu({ open, items, onClose }) {
             <button
               key={item.label}
               type="button"
+              disabled={Boolean(item.disabled)}
               onClick={() => {
+                if (item.disabled) return;
                 item.onClick?.();
                 onClose?.();
               }}
-              className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-xs transition hover:bg-white/10 ${item.className || "text-[#E5E7EB]"}`}
+              className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-xs transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-35 ${item.className || "text-[#E5E7EB]"}`}
             >
               {item.icon}
               {item.label}

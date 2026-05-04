@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Menu,
-  LogOut,
   Bell,
   Search,
   ChevronDown,
@@ -9,21 +8,17 @@ import {
   AlertTriangle,
   ShieldAlert,
   ShieldCheck,
-  Settings2,
-  Database,
-  Moon,
-  Sun,
-  Lock,
-  UserCircle2,
-  KeyRound,
   ActivitySquare,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "@/features/auth/context/AuthContext";
+import { useWorkspaceControl } from "@/context/WorkspaceControlContext";
+import UserWorkspacePanel from "@/components/workspace/UserWorkspacePanel";
 
 export default function AppTopbar({ title, onMenuClick }) {
-  const { user, logout, role } = useAuth();
+  const { user, role } = useAuth();
+  const { isLight } = useWorkspaceControl();
   const navigate = useNavigate();
   const [time, setTime] = useState(() => new Date());
   const [notifOpen, setNotifOpen] = useState(false);
@@ -31,7 +26,6 @@ export default function AppTopbar({ title, onMenuClick }) {
   const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [activeSearchIndex, setActiveSearchIndex] = useState(0);
-  const [themeMode, setThemeMode] = useState("dark");
   const [notifSectionsOpen, setNotifSectionsOpen] = useState({
     critical: true,
     security: true,
@@ -221,7 +215,12 @@ export default function AppTopbar({ title, onMenuClick }) {
   }, []);
 
   return (
-    <header ref={topbarRef} className="fixed left-0 right-0 top-0 z-30 h-[72px] border-b border-white/15 bg-[#111827]/70 backdrop-blur-xl lg:left-64">
+    <header
+      ref={topbarRef}
+      className={`workspace-topbar fixed left-0 right-0 top-0 z-30 h-[72px] border-b backdrop-blur-xl lg:left-64 ${
+        isLight ? "border-slate-200 bg-white/90" : "border-white/15 bg-[#111827]/70"
+      }`}
+    >
       <div className="flex h-full items-center justify-between px-4 md:px-6">
         <div className="flex items-center gap-3">
           <button
@@ -231,7 +230,7 @@ export default function AppTopbar({ title, onMenuClick }) {
           >
             <Menu className="h-5 w-5" />
           </button>
-          <h1 className="text-lg font-semibold text-white">{title}</h1>
+          <h1 className={`text-lg font-semibold ${isLight ? "text-slate-900" : "text-white"}`}>{title}</h1>
         </div>
         <div className="flex items-center gap-2 md:gap-3">
           <div className="relative hidden md:block">
@@ -261,14 +260,24 @@ export default function AppTopbar({ title, onMenuClick }) {
                 }
               }}
               placeholder="Search alerts, users, logs..."
-              className="w-56 rounded-xl border border-white/10 bg-[#0F172A] py-2 pl-9 pr-3 text-sm text-white outline-none focus:ring-2 focus:ring-[#3B82F6]/60"
+              className={`w-56 rounded-xl border py-2 pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-[#3B82F6]/60 ${
+                isLight
+                  ? "border-slate-200 bg-white text-slate-900 placeholder:text-slate-400"
+                  : "border-white/10 bg-[#0F172A] text-white"
+              }`}
             />
             {searchOpen && (
-              <div className="absolute left-0 right-0 z-40 mt-2 rounded-xl border border-white/10 bg-[#0F172A] p-2 shadow-2xl">
+              <div
+                className={`absolute left-0 right-0 z-40 mt-2 rounded-xl border p-2 shadow-2xl ${
+                  isLight ? "border-slate-200 bg-white" : "border-white/10 bg-[#0F172A]"
+                }`}
+              >
                 {searchResults.length ? searchResults.map((item, idx) => (
                   <button
                     key={`${item.category}-${item.label}`}
-                    className={`flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-xs text-[#E5E7EB] hover:bg-white/10 ${activeSearchIndex === idx ? "bg-white/10" : ""}`}
+                    className={`flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-xs ${
+                      isLight ? `text-slate-800 hover:bg-slate-100` : `text-[#E5E7EB] hover:bg-white/10`
+                    } ${activeSearchIndex === idx ? (isLight ? "bg-slate-100" : "bg-white/10") : ""}`}
                     onClick={() => {
                       setSearch(item.label);
                       setSearchOpen(false);
@@ -278,12 +287,16 @@ export default function AppTopbar({ title, onMenuClick }) {
                     <span className="text-[#9CA3AF]">{item.category}</span>
                   </button>
                 )) : (
-                  <p className="px-2 py-3 text-xs text-[#9CA3AF]">No results found.</p>
+                  <p className={`px-2 py-3 text-xs ${isLight ? "text-slate-500" : "text-[#9CA3AF]"}`}>No results found.</p>
                 )}
               </div>
             )}
           </div>
-          <div className="hidden items-center gap-1 rounded-lg border border-white/10 bg-[#0F172A] px-2 py-1.5 text-xs text-[#9CA3AF] md:flex">
+          <div
+            className={`hidden items-center gap-1 rounded-lg border px-2 py-1.5 text-xs md:flex ${
+              isLight ? "border-slate-200 bg-slate-50 text-slate-600" : "border-white/10 bg-[#0F172A] text-[#9CA3AF]"
+            }`}
+          >
             <Clock3 className="h-3.5 w-3.5 text-[#60A5FA]" />
             {time.toLocaleTimeString()}
           </div>
@@ -295,7 +308,11 @@ export default function AppTopbar({ title, onMenuClick }) {
                 setNotifOpen((prev) => !prev);
                 setProfileOpen(false);
               }}
-              className="relative rounded-lg border border-white/10 p-2 text-[#9CA3AF] hover:bg-white/10 hover:text-white"
+              className={`relative rounded-lg border p-2 transition hover:text-inherit ${
+                isLight
+                  ? "border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                  : "border-white/10 text-[#9CA3AF] hover:bg-white/10 hover:text-white"
+              }`}
             >
               <Bell className="h-4.5 w-4.5" />
               {unreadCount > 0 ? (
@@ -311,12 +328,21 @@ export default function AppTopbar({ title, onMenuClick }) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 8 }}
                 transition={{ duration: 0.18, ease: "easeOut" }}
-                className="absolute right-0 z-40 mt-2 w-[420px] rounded-2xl border border-white/10 bg-[#0F172A]/90 shadow-[0_20px_50px_rgba(2,6,23,0.5)] backdrop-blur-xl"
+                className={`absolute right-0 z-40 mt-2 w-[420px] rounded-2xl border shadow-[0_20px_50px_rgba(2,6,23,0.35)] backdrop-blur-xl ${
+                  isLight ? "border-slate-200 bg-white/95" : "border-white/10 bg-[#0F172A]/90"
+                }`}
               >
-                <div className="sticky top-0 z-10 rounded-t-2xl border-b border-white/10 bg-[#0F172A]/95 p-3 backdrop-blur">
+                <div
+                  className={`sticky top-0 z-10 rounded-t-2xl border-b p-3 backdrop-blur ${
+                    isLight ? "border-slate-200 bg-white/98" : "border-white/10 bg-[#0F172A]/95"
+                  }`}
+                >
                   <div>
-                    <p className="text-sm font-semibold text-white">Notifications</p>
-                    <p className="text-xs text-[#94A3B8]">Live Threat Alerts · <span className="rounded-full bg-[#EF4444]/20 px-1.5 py-0.5 text-[10px] text-[#FCA5A5]">{unreadCount}</span></p>
+                    <p className={`text-sm font-semibold ${isLight ? "text-slate-900" : "text-white"}`}>Notifications</p>
+                    <p className={`text-xs ${isLight ? "text-slate-500" : "text-[#94A3B8]"}`}>
+                      Live Threat Alerts ·{" "}
+                      <span className="rounded-full bg-[#EF4444]/20 px-1.5 py-0.5 text-[10px] text-[#FCA5A5]">{unreadCount}</span>
+                    </p>
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -400,7 +426,11 @@ export default function AppTopbar({ title, onMenuClick }) {
                     </div>
                   )})}
                 </div>
-                <div className="sticky bottom-0 border-t border-white/10 bg-[#0F172A]/95 px-3 py-2 backdrop-blur">
+                <div
+                  className={`sticky bottom-0 border-t px-3 py-2 backdrop-blur ${
+                    isLight ? "border-slate-200 bg-white/98" : "border-white/10 bg-[#0F172A]/95"
+                  }`}
+                >
                   <button
                     type="button"
                     onClick={() => {
@@ -424,57 +454,22 @@ export default function AppTopbar({ title, onMenuClick }) {
                 setProfileOpen((prev) => !prev);
                 setNotifOpen(false);
               }}
-              className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#0F172A] px-2.5 py-1.5 text-left hover:bg-white/10"
+              className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left transition hover:opacity-[0.98] ${
+                isLight ? "border-slate-200 bg-white hover:bg-slate-50" : "border-white/10 bg-[#0F172A] hover:bg-white/10"
+              }`}
             >
               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#3B82F6]/20 text-xs font-semibold text-[#BFDBFE]">
                 {(user?.fullName || "OP").slice(0, 2).toUpperCase()}
               </span>
               <div className="hidden md:block">
-                <p className="text-xs font-medium text-white">{user?.fullName || "Operator"}</p>
-                <p className="text-[11px] text-[#9CA3AF]">{user?.email}</p>
+                <p className={`text-xs font-medium ${isLight ? "text-slate-900" : "text-white"}`}>{user?.fullName || "Operator"}</p>
+                <p className={`text-[11px] ${isLight ? "text-slate-500" : "text-[#9CA3AF]"}`}>{user?.email}</p>
               </div>
-              <ChevronDown className="h-3.5 w-3.5 text-[#9CA3AF]" />
+              <ChevronDown className={`h-3.5 w-3.5 ${isLight ? "text-slate-500" : "text-[#9CA3AF]"}`} />
             </button>
             <AnimatePresence>
               {profileOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 8 }}
-                  transition={{ duration: 0.18, ease: "easeOut" }}
-                  className="absolute right-0 z-40 mt-2 w-[380px] rounded-2xl border border-white/10 bg-[#0F172A]/90 p-3 shadow-[0_20px_50px_rgba(2,6,23,0.5)] backdrop-blur-xl"
-                >
-                  <div className="mb-3 rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                    <div className="mb-3 flex items-center gap-3">
-                      <span className="flex h-12 w-12 items-center justify-center rounded-full border border-[#3B82F6]/30 bg-[#3B82F6]/15 text-base font-semibold text-[#BFDBFE]">
-                        {(user?.fullName || "AO").slice(0, 2).toUpperCase()}
-                      </span>
-                      <div>
-                        <div className="text-sm font-semibold text-white">Admin Operator</div>
-                        <div className="text-xs text-[#9CA3AF]">Super Admin</div>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 text-[10px]">
-                      <div className="rounded-md bg-[#0B1220] px-2 py-1 text-[#94A3B8]">Last login<br /><span className="text-[#E5E7EB]">09:41 UTC</span></div>
-                      <div className="rounded-md bg-[#0B1220] px-2 py-1 text-[#94A3B8]">Region<br /><span className="text-[#E5E7EB]">EU-Central</span></div>
-                      <div className="rounded-md bg-[#0B1220] px-2 py-1 text-[#94A3B8]">Security<br /><span className="text-[#6EE7B7]">98/100</span></div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <button type="button" onClick={() => { navigate(role === "admin" ? "/admin/users" : "/user/profile"); setProfileOpen(false); }} className="flex h-12 w-full items-center gap-2 rounded-lg px-3 text-sm text-[#E5E7EB] transition hover:bg-[#3B82F6]/15 hover:shadow-[inset_0_0_0_1px_rgba(59,130,246,0.25)]"><UserCircle2 className="h-4 w-4 text-[#93C5FD]" />My Profile</button>
-                    <button type="button" onClick={() => { navigate("/admin/threats"); setProfileOpen(false); }} className="flex h-12 w-full items-center gap-2 rounded-lg px-3 text-sm text-[#E5E7EB] transition hover:bg-[#3B82F6]/15 hover:shadow-[inset_0_0_0_1px_rgba(59,130,246,0.25)]"><ShieldAlert className="h-4 w-4 text-[#FDBA74]" />Security Center</button>
-                    <button type="button" onClick={() => { navigate("/admin/settings"); setProfileOpen(false); }} className="flex h-12 w-full items-center gap-2 rounded-lg px-3 text-sm text-[#E5E7EB] transition hover:bg-[#3B82F6]/15 hover:shadow-[inset_0_0_0_1px_rgba(59,130,246,0.25)]"><KeyRound className="h-4 w-4 text-[#BFDBFE]" />API Keys</button>
-                    <button type="button" onClick={() => { navigate("/admin/settings"); setProfileOpen(false); }} className="flex h-12 w-full items-center gap-2 rounded-lg px-3 text-sm text-[#E5E7EB] transition hover:bg-[#3B82F6]/15 hover:shadow-[inset_0_0_0_1px_rgba(59,130,246,0.25)]"><Settings2 className="h-4 w-4 text-[#9CA3AF]" />Preferences</button>
-                    <button type="button" onClick={() => setThemeMode((prev) => (prev === "dark" ? "light" : "dark"))} className="flex h-12 w-full items-center gap-2 rounded-lg px-3 text-sm text-[#E5E7EB] transition hover:bg-[#3B82F6]/15 hover:shadow-[inset_0_0_0_1px_rgba(59,130,246,0.25)]">{themeMode === "dark" ? <Moon className="h-4 w-4 text-[#93C5FD]" /> : <Sun className="h-4 w-4 text-[#FCD34D]" />}Theme Toggle</button>
-                    <button type="button" onClick={() => { navigate("/admin/users"); setProfileOpen(false); }} className="flex h-12 w-full items-center gap-2 rounded-lg px-3 text-sm text-[#E5E7EB] transition hover:bg-[#3B82F6]/15 hover:shadow-[inset_0_0_0_1px_rgba(59,130,246,0.25)]"><Database className="h-4 w-4 text-[#A7F3D0]" />Sessions</button>
-                  </div>
-
-                  <div className="my-2 border-t border-white/10" />
-
-                  <button type="button" onClick={() => setProfileOpen(false)} className="mb-1 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm text-[#FDE68A] hover:bg-[#F59E0B]/10"><Lock className="h-4 w-4" />Lock Workspace</button>
-                  <button type="button" onClick={logout} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm text-[#FCA5A5] hover:bg-[#EF4444]/10"><LogOut className="h-4 w-4" />Logout</button>
-                </motion.div>
+                <UserWorkspacePanel user={user} role={role} onClose={() => setProfileOpen(false)} />
               )}
             </AnimatePresence>
           </div>
