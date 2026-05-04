@@ -61,6 +61,10 @@ export default memo(function AppRoutes() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
+        <Route path="/upload" element={<Navigate to="/user/upload" replace />} />
+        <Route path="/files" element={<Navigate to="/user/files" replace />} />
+        <Route path="/security" element={<Navigate to="/user/security" replace />} />
+
         <Route
           path="/admin"
           element={

@@ -2,7 +2,8 @@ import { useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { X } from "lucide-react";
 
-export function Modal({ title, children, onClose }) {
+export function Modal({ title, children, onClose, tone = "dark" }) {
+  const isLight = tone === "light";
   const containerRef = useRef(null);
 
   useEffect(() => {
@@ -51,14 +52,22 @@ export function Modal({ title, children, onClose }) {
         initial={{ opacity: 0, y: 14, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 14, scale: 0.98 }}
-        className="fixed left-1/2 top-1/2 z-[61] w-[92%] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/10 bg-[#111827] p-5 shadow-2xl"
+        className={
+          isLight
+            ? "fixed left-1/2 top-1/2 z-[61] w-[92%] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl"
+            : "fixed left-1/2 top-1/2 z-[61] w-[92%] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/10 bg-[#111827] p-5 shadow-2xl"
+        }
       >
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-base font-semibold text-[#E5E7EB]">{title}</h3>
+          <h3 className={`text-base font-semibold ${isLight ? "text-slate-900" : "text-[#E5E7EB]"}`}>{title}</h3>
           <button
             type="button"
             onClick={onClose}
-            className="rounded p-1 text-[#9CA3AF] hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38bdf8]"
+            className={
+              isLight
+                ? "rounded p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                : "rounded p-1 text-[#9CA3AF] hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38bdf8]"
+            }
           >
             <X className="h-4 w-4" aria-hidden />
           </button>

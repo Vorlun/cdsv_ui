@@ -50,7 +50,8 @@ export const INGEST_PIPELINE_STEPS = Object.freeze([
 export function sanitizeUploadFileName(raw) {
   const base = sanitizePlainText(String(raw ?? "").replace(/^.*[/\\]/, "").trim(), 220);
   if (!base || base === "." || base === "..") return "unnamed.bin";
-  return base.replace(/[<>:"|?*\x00-\x1f]/g, "_").slice(0, 200);
+  /* eslint-disable-next-line no-control-regex -- strip path-dangerous ASCII controls */
+  return base.replace(/[<>:"|?*\0-\x1f]/g, "_").slice(0, 200);
 }
 
 /** @param {string} fileName */
@@ -96,7 +97,7 @@ export function validateCarrierPolicy({ sizeMb, ext, encryptionState }) {
  * Simulate CM / TLS-at-rest signal (lab — not cryptographic proof).
  */
 export function simulateEncryptionAttestation(seed) {
-  /** Deterministic rolling mix (~58 % ciphertext-wrapped lab traffic, remainder plaintext legacy feeders). */
+  /** Deterministic rolling mix (~58% ciphertext-wrapped lab traffic, remainder plaintext legacy feeders). */
   let h = 5381;
   const s = String(seed);
   for (let i = 0; i < s.length; i += 1) h = (h * 33 + s.charCodeAt(i)) | 0;

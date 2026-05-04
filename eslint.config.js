@@ -6,7 +6,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 /** @see https://eslint.org/docs/latest/use/configure/configuration-files-new */
 export default [
   js.configs.recommended,
-  { ignores: ["dist/**", "node_modules/**"] },
+  { ignores: ["dist/**", "node_modules/**", "server/uploads/**"] },
   {
     files: ["src/**/*.{js,jsx}"],
     plugins: {
@@ -25,6 +25,17 @@ export default [
       ...reactHooks.configs.recommended.rules,
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off",
+      "no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
+    },
+  },
+  {
+    files: ["server/**/*.mjs"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: { ...globals.node },
+    },
+    rules: {
       "no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
     },
   },
