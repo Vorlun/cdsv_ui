@@ -18,7 +18,7 @@ export default function UserLayout() {
   return (
     <div
       className={`workspace-shell h-screen overflow-hidden transition-colors duration-200 ${
-        isLight ? "bg-slate-100 text-slate-900" : "bg-[#0B0F1A] text-[#E5E7EB]"
+        isLight ? "bg-[#eef2f7] text-slate-900" : "bg-[#0B0F1A] text-[#E5E7EB]"
       }`}
     >
       <AppSidebar
@@ -32,7 +32,7 @@ export default function UserLayout() {
         onToggleCollapse={setSidebarCollapsed}
         isLight={isLight}
       />
-      <div className={["ml-0 flex h-screen flex-col transition-[margin] duration-200 ease-out", mainGutter].join(" ")}>
+      <div className={["ml-0 flex h-screen flex-col transition-[margin] duration-300 ease-in-out", mainGutter].join(" ")}>
         <AppTopbar title={title} onMenuClick={() => setMobileOpen(true)} />
         <main
           id="main-content"

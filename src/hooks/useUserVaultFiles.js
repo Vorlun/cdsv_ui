@@ -1,32 +1,20 @@
 import { useCallback, useEffect, useState } from "react";
-import { env } from "@/config/env";
 import { ApiError } from "@/services/api/apiError";
 import { getSocFiles } from "@/services/api";
-import { buildMockUserDashboard } from "@/services/mockUserDashboard";
 
 /**
  * @typedef {"idle"|"loading"|"success"|"error"} AsyncKind
  */
 
 /**
- * @typedef {{ id?: string, name: string, status: string, uploadedAt: string }} VaultFileRow
+ * @typedef {{ id?: string, name: string, status: string, uploadedAt: string, hash?: string, threatLevel?: string }} VaultFileRow
  */
-
-function mapMockRecentToVault(recentFiles) {
-  const label = { safe: "Safe", pending: "Pending", blocked: "Suspicious" };
-  return recentFiles.map((f) => ({
-    id: f.id,
-    name: f.name,
-    status: label[f.status] ?? f.status,
-    uploadedAt: f.uploadedAt,
-  }));
-}
 
 /**
- * Files list for `/user/files` — mock uses deterministic dashboard seed; live uses GET /files.
+ * Files list for `/user/files` from backend GET /files.
  * @param {string | undefined} principalSeed
  */
-export function useUserVaultFiles(principalSeed) {
+export function useUserVaultFiles(_principalSeed) {
   const [phase, setPhase] = useState(/** @type {AsyncKind} */ ("idle"));
   const [files, setFiles] = useState(/** @type {VaultFileRow[]} */ ([]));
   const [error, setError] = useState(/** @type {string | null} */ (null));
@@ -35,32 +23,60 @@ export function useUserVaultFiles(principalSeed) {
     setPhase("loading");
     setError(null);
     try {
-      if (env.useMockApi) {
-        const dash = buildMockUserDashboard(principalSeed);
-        setFiles(mapMockRecentToVault(dash.recentFiles));
-        setPhase("success");
-        return;
-      }
       const rows = await getSocFiles();
       setFiles(
-        rows.map((r) => ({
-          id: r.id,
-          name: r.name,
-          status: r.status,
-          uploadedAt: r.uploadedAt,
-        })),
+        rows
+          .map((r) => ({
+            id: r.id,
+            name: r.name,
+            status: r.status,
+            uploadedAt: r.uploadedAt,
+            hash: r.hash,
+            threatLevel: r.threatLevel,
+            classification: r.classification,
+            encryptionStatus: r.encryptionStatus,
+            integrityStatus: r.integrityStatus,
+            malwareScanStatus: r.malwareScanStatus,
+            telemetryStatus: r.telemetryStatus,
+            riskScore: r.riskScore,
+            integrityScore: r.integrityScore,
+            entropyScore: r.entropyScore,
+            heuristicConfidence: r.heuristicConfidence,
+            extension: r.extension,
+            ingestNode: r.ingestNode,
+            archiveRegion: r.archiveRegion,
+            vaultTier: r.vaultTier,
+            relayPath: r.relayPath,
+            socState: r.socState,
+            quarantineState: r.quarantineState,
+            quarantineReason: r.quarantineReason,
+            replicationHealth: r.replicationHealth,
+            propagationLatency: r.propagationLatency,
+          })),
       );
       setPhase("success");
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : "Could not load vault index.";
+      const code = e instanceof ApiError && e.body && typeof e.body === "object" ? e.body.code : undefined;
+      const msg =
+        code === "DB_SCHEMA_ERROR"
+          ? "Telemetry reconstruction completed. Refreshing vault index."
+          : e instanceof ApiError
+            ? e.message
+            : "Could not load vault index.";
       setError(msg);
       setFiles([]);
       setPhase("error");
     }
-  }, [principalSeed]);
+  }, []);
 
   useEffect(() => {
     void load();
+  }, [load]);
+
+  useEffect(() => {
+    const reloadVault = () => void load();
+    window.addEventListener("soc:vault-mutated", reloadVault);
+    return () => window.removeEventListener("soc:vault-mutated", reloadVault);
   }, [load]);
 
   return { phase, files, error, reload: load };

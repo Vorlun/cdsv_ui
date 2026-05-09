@@ -17,7 +17,7 @@ function pick(arr, i) {
 
 /** @typedef {{ id: string, message: string, severity: string, ago: string, dismissed?: boolean }} ThreatAlert */
 
-function severityRank(sev) {
+function _severityRank(sev) {
   const s = String(sev ?? "");
   if (s === "Critical") return 4;
   if (s === "High") return 3;

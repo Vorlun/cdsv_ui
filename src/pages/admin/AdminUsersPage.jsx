@@ -7,7 +7,9 @@ import {
   ArrowUpWideNarrow,
   CircleAlert,
   Clock3,
+  Copy,
   Download,
+  FolderOpen,
   Eye,
   CheckCircle2,
   PauseCircle,
@@ -59,7 +61,9 @@ const emptyForm = {
   password: "",
   role: "User",
   status: "Active",
-  allowedDevices: "1",
+  allowedDevices: "5",
+  department: "",
+  avatarUrl: "",
   notes: "",
 };
 

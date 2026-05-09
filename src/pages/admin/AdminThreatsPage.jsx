@@ -53,7 +53,29 @@ function AnimatedCount({ value }) {
   return <span>{display}</span>;
 }
 
-const SoarUnifiedFeedPanel = memo(function SoarUnifiedFeedPanel({ feed = [], syncing, focusThreatId = "" }) {
+/** @param {{ delta: number | undefined; goodWhenUp?: boolean }} props */
+function MetricTrend({ delta, goodWhenUp = false }) {
+  const n = Number(delta ?? 0);
+  if (!Number.isFinite(n) || n === 0) {
+    return <span className="text-[10px] text-[#64748B]">steady</span>;
+  }
+  const up = n > 0;
+  const favorable = goodWhenUp ? up : !up;
+  const cls = favorable ? "text-[#6EE7B7]" : "text-[#FCA5A5]";
+  const arrow = up ? "↑" : "↓";
+  return (
+    <span className={`text-[10px] font-medium ${cls}`}>
+      {arrow} {Math.abs(Math.round(n))}
+    </span>
+  );
+}
+
+const SoarUnifiedFeedPanel = memo(function SoarUnifiedFeedPanel({
+  feed = [],
+  syncing,
+  focusThreatId = "",
+  onPingAnalyst,
+}) {
   useEffect(() => {
     if (!focusThreatId) return;
     const match = feed.some((row) => String(row.id) === focusThreatId);
@@ -70,7 +92,7 @@ const SoarUnifiedFeedPanel = memo(function SoarUnifiedFeedPanel({ feed = [], syn
   }, [focusThreatId, feed]);
 
   return (
-    <div className="h-[290px] space-y-2 overflow-y-auto pr-1">
+    <div className="h-[220px] space-y-2 overflow-y-auto pr-1">
       {syncing ? (
         <p className="mb-1 flex items-center gap-2 rounded-lg border border-white/10 bg-[#0F172A]/80 px-3 py-2 text-[11px] text-[#64748B]">
           <Loader2 className="h-4 w-4 animate-spin text-[#38BDF8]" aria-hidden /> Merging stream…
@@ -113,16 +135,32 @@ const SoarUnifiedFeedPanel = memo(function SoarUnifiedFeedPanel({ feed = [], syn
               <span className="text-[10px] text-[#64748B]">{sanitizePlainText(item.time, 32)}</span>
             </div>
             <div className="text-[#D1D5DB]">{sanitizePlainText(item.text, 520)}</div>
-            {"source" in item && (
-              <div className="mt-1 text-[10px] uppercase tracking-wide text-[#475569]">
-                {sanitizePlainText(item.source ?? "", 20)}
-              </div>
-            )}
+            <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-white/5 pt-2">
+              {"source" in item && (
+                <span className="text-[10px] uppercase tracking-wide text-[#475569]">
+                  {sanitizePlainText(item.source ?? "", 24)}
+                </span>
+              )}
+              {"attackType" in item && item.attackType ? (
+                <span className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-[10px] text-[#93C5FD]">
+                  {sanitizePlainText(item.attackType, 48)}
+                </span>
+              ) : null}
+              {typeof onPingAnalyst === "function" ? (
+                <button
+                  type="button"
+                  onClick={() => onPingAnalyst(item)}
+                  className="ml-auto rounded border border-[#F97316]/35 bg-[#F97316]/10 px-2 py-0.5 text-[10px] text-[#FDBA74] transition hover:bg-[#F97316]/20"
+                >
+                  Queue triage
+                </button>
+              ) : null}
+            </div>
           </motion.div>
         ))}
       </AnimatePresence>
       {!feed.length ? (
-        <EmptyState title="Feed nominal" description="Correlated playbook events will enqueue here automatically." />
+        <EmptyState title="No telemetries in window" description="Security and analyst-plane events from the last 24–72h appear here." />
       ) : null}
     </div>
   );
@@ -211,17 +249,52 @@ export default function AdminThreatsPage() {
     const m = snapshot?.metrics;
     if (!m) {
       return [
-        { label: "Detecting", value: 0, icon: ShieldAlert, color: "text-[#FCA5A5]" },
-        { label: "Investigating", value: 0, icon: Search, color: "text-[#FDE68A]" },
-        { label: "Mitigated", value: 0, icon: Ban, color: "text-[#6EE7B7]" },
-        { label: "Global Risk Score", value: 0, icon: AlertTriangle, color: "text-[#FDBA74]" },
+        { label: "Detecting", value: 0, trend: 0, goodWhenUp: false, icon: ShieldAlert, color: "text-[#FCA5A5]" },
+        { label: "Investigating", value: 0, trend: 0, goodWhenUp: false, icon: Search, color: "text-[#FDE68A]" },
+        { label: "Mitigated", value: 0, trend: 0, goodWhenUp: true, icon: Ban, color: "text-[#6EE7B7]" },
+        {
+          label: "Global Risk Score",
+          value: 0,
+          trend: 0,
+          goodWhenUp: false,
+          icon: AlertTriangle,
+          color: "text-[#FDBA74]",
+        },
       ];
     }
     return [
-      { label: "Detecting", value: m.detecting, icon: ShieldAlert, color: "text-[#FCA5A5]" },
-      { label: "Investigating", value: m.investigating, icon: Search, color: "text-[#FDE68A]" },
-      { label: "Mitigated", value: m.mitigated, icon: Ban, color: "text-[#6EE7B7]" },
-      { label: "Global Risk Score", value: m.globalRiskScore ?? 0, icon: AlertTriangle, color: "text-[#FDBA74]" },
+      {
+        label: "Detecting",
+        value: m.detecting,
+        trend: m.trendDetecting,
+        goodWhenUp: false,
+        icon: ShieldAlert,
+        color: "text-[#FCA5A5]",
+      },
+      {
+        label: "Investigating",
+        value: m.investigating,
+        trend: m.trendInvestigating,
+        goodWhenUp: false,
+        icon: Search,
+        color: "text-[#FDE68A]",
+      },
+      {
+        label: "Mitigated",
+        value: m.mitigated,
+        trend: m.trendMitigated,
+        goodWhenUp: true,
+        icon: Ban,
+        color: "text-[#6EE7B7]",
+      },
+      {
+        label: "Global Risk Score",
+        value: m.globalRiskScore ?? 0,
+        trend: m.trendRisk,
+        goodWhenUp: false,
+        icon: AlertTriangle,
+        color: "text-[#FDBA74]",
+      },
     ];
   }, [snapshot?.metrics]);
 
@@ -303,6 +376,18 @@ export default function AdminThreatsPage() {
     [actor, runAction, pushToast],
   );
 
+  const pingFeedTriage = useCallback(
+    (_item) => {
+      const first = sortedIncidents[0];
+      if (!first?.id) {
+        pushToast("No correlated incident to anchor — baseline SOC posture.");
+        return;
+      }
+      void openInvestigation(first.id, first.lifecycle);
+    },
+    [sortedIncidents, pushToast, openInvestigation],
+  );
+
   const loading = status === "loading";
   const totalIncidents = sortedIncidents.length;
 
@@ -325,8 +410,8 @@ export default function AdminThreatsPage() {
         <section className="rounded-2xl border border-white/10 bg-[#0F172A]/90 p-5 shadow-[0_0_24px_rgba(59,130,246,0.14)]">
           <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">SOAR Threat Command</h1>
           <p className="mt-1 text-sm text-[#94A3B8]">
-            Orchestrated response — correlated from the same <code className="text-[#93C5FD]">liveLogs</code> buffer as
-            SIEM Audit Center. Stream shard {snapshot?.iterations ?? "—"}.
+            DB-backed correlation — security events, uploads, sessions, and analyst actions. Stream shard{" "}
+            {snapshot?.iterations ?? "—"} · telemetry socket debounced refresh.
           </p>
         </section>
 
@@ -351,7 +436,10 @@ export default function AdminThreatsPage() {
                 <div className="text-3xl font-bold text-white">
                   {loading ? "—" : <AnimatedCount value={metric.value} />}
                 </div>
-                <div className="mt-1 text-xs text-[#FDBA74]">Rolling window · GET /soar/snapshot</div>
+                <div className="mt-2 flex items-center justify-between gap-2 border-t border-white/5 pt-2">
+                  <span className="text-[10px] text-[#64748B]">Δ vs prior refresh</span>
+                  <MetricTrend delta={metric.trend} goodWhenUp={metric.goodWhenUp} />
+                </div>
               </div>
             );
           })}
@@ -380,7 +468,7 @@ export default function AdminThreatsPage() {
           <div className="rounded-2xl border border-white/10 bg-[#111827]/95 p-4">
             <div className="mb-3 text-sm font-semibold text-[#E5E7EB]">Attack surface (log-derived)</div>
             {loading && !snapshot ? (
-              <div className="flex h-[290px] items-center justify-center text-[#64748B]">
+              <div className="flex h-[220px] items-center justify-center text-[#64748B]">
                 <Loader2 className="h-8 w-8 animate-spin text-[#38BDF8]" aria-hidden />
               </div>
             ) : (
@@ -394,6 +482,7 @@ export default function AdminThreatsPage() {
               feed={snapshot?.unifiedFeed ?? []}
               syncing={loading && snapshot == null}
               focusThreatId={focusThreatCrossLink}
+              onPingAnalyst={pingFeedTriage}
             />
           </div>
         </section>
@@ -406,7 +495,7 @@ export default function AdminThreatsPage() {
             </span>
           </div>
           {loading && !snapshot ? (
-            <div className="flex justify-center py-16 text-[#64748B]">
+            <div className="flex justify-center py-10 text-[#64748B]">
               <Loader2 className="h-8 w-8 animate-spin" aria-hidden />
             </div>
           ) : !sortedIncidents.length ? (
@@ -437,7 +526,7 @@ export default function AdminThreatsPage() {
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-md xl:col-span-1">
             <div className="mb-3 text-sm font-semibold text-[#E5E7EB]">Campaign mix</div>
             <div className="grid items-center gap-2 md:grid-cols-[1fr_1fr]">
-              <div className="relative h-52">
+              <div className="relative h-44">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -499,7 +588,7 @@ export default function AdminThreatsPage() {
 
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-md xl:col-span-1">
             <div className="mb-3 text-sm font-semibold text-[#E5E7EB]">Correlation timeline</div>
-            <div className="h-56">
+            <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={timeline}>
                   <CartesianGrid stroke="rgba(148,163,184,0.12)" vertical={false} />

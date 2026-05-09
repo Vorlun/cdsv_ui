@@ -14,9 +14,17 @@ const AdminLogsPage = lazy(() => import("@/pages/admin/AdminLogsPage"));
 const AdminThreatsPage = lazy(() => import("@/pages/admin/AdminThreatsPage"));
 const AdminUploadActivityPage = lazy(() => import("@/pages/admin/AdminUploadActivityPage"));
 const AdminSettingsPage = lazy(() => import("@/pages/admin/AdminSettingsPage"));
+const AdminTelemetryPage = lazy(() => import("@/pages/admin/AdminTelemetryPage"));
+const AdminSecurityCenterPage = lazy(() => import("@/pages/admin/AdminSecurityCenterPage"));
+const AdminAiMonitoringPage = lazy(() => import("@/pages/admin/AdminAiMonitoringPage"));
+const AdminSystemAnalyticsPage = lazy(() => import("@/pages/admin/AdminSystemAnalyticsPage"));
+const AdminInfrastructurePage = lazy(() => import("@/pages/admin/AdminInfrastructurePage"));
+const AdminNotificationsPage = lazy(() => import("@/pages/admin/AdminNotificationsPage"));
+const AdminReportsPage = lazy(() => import("@/pages/admin/AdminReportsPage"));
 const UserDashboardPage = lazy(() => import("@/pages/user/UserDashboardPage"));
 const UserUploadPage = lazy(() => import("@/pages/user/UserUploadPage"));
 const UserFilesPage = lazy(() => import("@/pages/user/UserFilesPage"));
+const UserFileDetailPage = lazy(() => import("@/pages/user/UserFileDetailPage"));
 const UserSecurityPage = lazy(() => import("@/pages/user/UserSecurityPage"));
 const UserProfilePage = lazy(() => import("@/pages/user/UserProfilePage"));
 const UserSettingsPage = lazy(() => import("@/pages/user/UserSettingsPage"));
@@ -75,9 +83,16 @@ export default memo(function AppRoutes() {
         >
           <Route path="dashboard" element={<AdminDashboardPage />} />
           <Route path="users" element={<AdminUsersPage />} />
-          <Route path="logs" element={<AdminLogsPage />} />
-          <Route path="threats" element={<AdminThreatsPage />} />
+          <Route path="telemetry" element={<AdminTelemetryPage />} />
           <Route path="uploads" element={<AdminUploadActivityPage />} />
+          <Route path="security" element={<AdminSecurityCenterPage />} />
+          <Route path="threats" element={<AdminThreatsPage />} />
+          <Route path="ai" element={<AdminAiMonitoringPage />} />
+          <Route path="analytics" element={<AdminSystemAnalyticsPage />} />
+          <Route path="logs" element={<AdminLogsPage />} />
+          <Route path="reports" element={<AdminReportsPage />} />
+          <Route path="infrastructure" element={<AdminInfrastructurePage />} />
+          <Route path="notifications" element={<AdminNotificationsPage />} />
           <Route path="settings" element={<AdminSettingsPage />} />
           <Route path="profile" element={<UserProfilePage />} />
         </Route>
@@ -93,9 +108,32 @@ export default memo(function AppRoutes() {
           <Route path="dashboard" element={<UserDashboardPage />} />
           <Route path="upload" element={<UserUploadPage />} />
           <Route path="files" element={<UserFilesPage />} />
+          <Route path="files/:id" element={<UserFileDetailPage />} />
           <Route path="security" element={<UserSecurityPage />} />
           <Route path="profile" element={<UserProfilePage />} />
           <Route path="settings" element={<UserSettingsPage />} />
+        </Route>
+
+        <Route
+          path="/vault/files/:id"
+          element={
+            <RequireAuth allowedRoles={["user"]}>
+              <UserLayout />
+            </RequireAuth>
+          }
+        >
+          <Route index element={<UserFileDetailPage />} />
+        </Route>
+
+        <Route
+          path="/secure-object/:id"
+          element={
+            <RequireAuth allowedRoles={["user"]}>
+              <UserLayout />
+            </RequireAuth>
+          }
+        >
+          <Route index element={<UserFileDetailPage />} />
         </Route>
 
         <Route path="/not-found" element={<NotFoundPage />} />

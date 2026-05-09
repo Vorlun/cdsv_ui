@@ -1,4 +1,5 @@
-import axios from "axios";
+import { postSocUpload } from "@/services/api";
+import { digestSha256HexFromBlob } from "@/features/soc-upload/useClientSha256";
 
 /**
  * @param {File} file
@@ -8,27 +9,13 @@ import axios from "axios";
  * }} options
  */
 export async function uploadSingleFile(file, { signal, onProgress } = {}) {
+  if (onProgress) onProgress(25);
+  const hash = await digestSha256HexFromBlob(file);
+  if (onProgress) onProgress(65);
   const body = new FormData();
   body.append("file", file);
-
-  const { data } = await axios.post("/api/upload", body, {
-    signal,
-    headers: { "Content-Type": "multipart/form-data" },
-    maxBodyLength: Infinity,
-    maxContentLength: Infinity,
-    onUploadProgress: (ev) => {
-      if (!onProgress) return;
-      const total = ev.total;
-      let pct;
-      if (total != null && total > 0) {
-        pct = Math.round((100 * ev.loaded) / total);
-      } else {
-        pct = Math.min(92, Math.round((ev.loaded * 100) / Math.max(file.size, 1)));
-      }
-      onProgress(Math.min(99, Math.max(0, pct)));
-    },
-  });
-
+  body.append("clientSha256", hash);
+  const data = await postSocUpload(body, { signal });
   if (onProgress) onProgress(100);
   return data;
 }

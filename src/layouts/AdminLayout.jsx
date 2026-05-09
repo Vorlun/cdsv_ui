@@ -16,24 +16,22 @@ export default function AdminLayout() {
   const mainGutter = sidebarCollapsed ? "lg:ml-[4.5rem]" : "lg:ml-64";
 
   return (
-    <div
-      className={`workspace-shell h-screen overflow-hidden transition-colors duration-200 ${
-        isLight ? "bg-slate-100 text-slate-900" : "bg-[#0B0F1A] text-[#E5E7EB]"
-      }`}
-    >
+    /* Admin console is always rendered in dark mode — intentional SOC terminal design.
+       User light/dark preference applies to the user workspace only. */
+    <div className="workspace-shell admin-dark-scope h-screen overflow-hidden bg-[#080C14] text-[#E5E7EB]">
       <AppSidebar
         persistNamespace="admin"
         title="CDSV Admin"
-        subtitle="Threat Operations"
+        subtitle="ENTERPRISE SECURITY CENTER"
         sections={ADMIN_NAV_SECTIONS}
         isOpen={mobileOpen}
         onClose={() => setMobileOpen(false)}
         collapsed={sidebarCollapsed}
         onToggleCollapse={setSidebarCollapsed}
-        isLight={isLight}
+        isLight={false}
       />
       <div className={["ml-0 flex h-screen flex-col transition-[margin] duration-200 ease-out", mainGutter].join(" ")}>
-        <AppTopbar title={title} onMenuClick={() => setMobileOpen(true)} />
+        <AppTopbar title={title} onMenuClick={() => setMobileOpen(true)} forceDark />
         <main
           id="main-content"
           role="main"

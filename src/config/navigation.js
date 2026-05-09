@@ -13,6 +13,13 @@ import {
   FolderKanban,
   ShieldCheck,
   UserCircle2,
+  Radio,
+  BarChart3,
+  Brain,
+  FileText,
+  Server,
+  Bell,
+  Shield,
 } from "lucide-react";
 import { matchPath } from "react-router-dom";
 
@@ -25,15 +32,33 @@ import { matchPath } from "react-router-dom";
 /** @type {readonly NavSection[]} */
 export const ADMIN_NAV_SECTIONS = Object.freeze([
   {
-    id: "admin-ops",
+    id: "admin-core",
+    title: "Core",
+    items: Object.freeze([
+      { id: "admin-dashboard", label: "Admin Dashboard", path: "/admin/dashboard", icon: LayoutDashboard },
+      { id: "admin-users", label: "User Management", path: "/admin/users", icon: Users },
+    ]),
+  },
+  {
+    id: "admin-operations",
     title: "Operations",
     items: Object.freeze([
-      { id: "admin-dashboard", label: "Dashboard", path: "/admin/dashboard", icon: LayoutDashboard },
-      { id: "admin-profile", label: "My Profile", path: "/admin/profile", icon: UserCircle2 },
-      { id: "admin-users", label: "Users", path: "/admin/users", icon: Users },
-      { id: "admin-logs", label: "Logs", path: "/admin/logs", icon: ScrollText },
-      { id: "admin-threats", label: "Threat Monitor", path: "/admin/threats", icon: ShieldAlert },
-      { id: "admin-uploads", label: "Upload Activity", path: "/admin/uploads", icon: UploadCloud },
+      { id: "admin-telemetry", label: "Telemetry Control", path: "/admin/telemetry", icon: Radio },
+      { id: "admin-uploads", label: "Upload Monitoring", path: "/admin/uploads", icon: UploadCloud },
+      { id: "admin-security", label: "Security Center", path: "/admin/security", icon: Shield },
+      { id: "admin-threats", label: "Threat Detection", path: "/admin/threats", icon: ShieldAlert },
+      { id: "admin-ai", label: "AI Monitoring", path: "/admin/ai", icon: Brain },
+      { id: "admin-analytics", label: "System Analytics", path: "/admin/analytics", icon: BarChart3 },
+    ]),
+  },
+  {
+    id: "admin-platform",
+    title: "Platform",
+    items: Object.freeze([
+      { id: "admin-logs", label: "Logs Center", path: "/admin/logs", icon: ScrollText },
+      { id: "admin-reports", label: "Reports", path: "/admin/reports", icon: FileText },
+      { id: "admin-infrastructure", label: "Infrastructure", path: "/admin/infrastructure", icon: Server },
+      { id: "admin-notifications", label: "Notifications", path: "/admin/notifications", icon: Bell },
       { id: "admin-settings", label: "Settings", path: "/admin/settings", icon: Settings },
     ]),
   },

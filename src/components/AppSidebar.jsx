@@ -44,7 +44,7 @@ function AppSidebarInner({
 
   const widthClass = collapsed ? "w-[4.5rem]" : "w-64";
   const asideClassName = [
-    "fixed left-0 top-0 z-40 flex h-screen flex-col border-r transition-all duration-200 ease-out",
+    "fixed left-0 top-0 z-40 flex h-screen flex-col border-r transition-all duration-300 ease-in-out",
     isLight ? "border-slate-200 bg-white" : "border-white/10 bg-[#111827]",
     widthClass,
     isOpen ? "translate-x-0" : "-translate-x-full",
@@ -65,14 +65,14 @@ function AppSidebarInner({
         <div
           className={[
             "flex items-center border-b p-4",
-            isLight ? "border-slate-200" : "border-white/10",
+            isLight ? "border-slate-200" : "border-white/[0.07]",
             collapsed ? "flex-col gap-2" : "justify-between",
           ].join(" ")}
         >
           {!collapsed ? (
             <div className="min-w-0 flex-1">
-              <p className={`truncate text-sm font-semibold ${isLight ? "text-slate-900" : "text-white"}`}>{title}</p>
-              <p className={`truncate text-xs uppercase tracking-wide ${isLight ? "text-slate-500" : "text-[#9CA3AF]"}`}>{subtitle}</p>
+              <p className={`truncate text-sm font-bold tracking-tight ${isLight ? "text-slate-900" : "text-white"}`}>{title}</p>
+              <p className={`mt-0.5 truncate text-[9px] font-medium uppercase tracking-[0.15em] ${isLight ? "text-slate-500" : "text-[#4B5563]"}`}>{subtitle}</p>
             </div>
           ) : (
             <span className="sr-only">
@@ -100,15 +100,15 @@ function AppSidebarInner({
           </div>
         </div>
 
-        <nav className="flex-1 space-y-4 overflow-y-auto overflow-x-hidden p-3">
+        <nav className="flex-1 space-y-5 overflow-y-auto overflow-x-hidden p-3 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.06)_transparent]">
           {sections.map((section) => (
             <div key={section.id}>
               {!collapsed ? (
-                <p className={`mb-2 px-2 text-xs uppercase tracking-wider ${isLight ? "text-slate-500" : "text-[#6B7280]"}`}>{section.title}</p>
+                <p className={`mb-1.5 px-2 text-[9px] font-semibold uppercase tracking-[0.14em] ${isLight ? "text-slate-400" : "text-[#374151]"}`}>{section.title}</p>
               ) : (
-                <div className={`mx-auto mb-2 h-px w-8 ${isLight ? "bg-slate-200" : "bg-white/10"}`} aria-hidden />
+                <div className={`mx-auto mb-2 h-px w-6 ${isLight ? "bg-slate-200" : "bg-white/[0.06]"}`} aria-hidden />
               )}
-              <div className="space-y-1.5">
+              <div className="space-y-0.5">
                 {section.items.map((item) => (
                   <SidebarItem key={item.id} item={item} collapsed={collapsed} onNavigate={onClose} isLight={isLight} />
                 ))}

@@ -55,21 +55,31 @@ export function useAuditCenterLogs(options = {}) {
   const [analystTrail, setAnalystTrail] = useState(() => []);
 
   const streamTimerRef = useRef(null);
+  const streamSinceRef = useRef(null);
   const filterCriteriaRef = useRef({});
   const streamBatchRef = useRef(null);
   const catalogRef = useRef(catalog);
   catalogRef.current = catalog;
 
+  const [siemOverview, setSiemOverview] = useState(null);
+
   const reload = useCallback(async () => {
     setFetchStatus("loading");
     setFetchError(null);
     try {
-      const bundle = await socApi.logs();
-      const items = Array.isArray(bundle.items) ? bundle.items.map((x) => ({ ...x })) : [];
+      const [feed, overview] = await Promise.all([
+        socApi.siemLogsFeed({ limit: 2500, hours: 72 }),
+        socApi.logsOverview().catch(() => null),
+      ]);
+      const items = Array.isArray(feed?.items) ? feed.items.map((x) => ({ ...x })) : [];
       setCatalog(items);
+      setSiemOverview(overview && typeof overview === "object" ? overview : null);
+      const newestTs = items.reduce((mx, r) => Math.max(mx, Date.parse(r.timestamp) || 0), 0);
+      streamSinceRef.current = newestTs > 0 ? new Date(newestTs).toISOString() : null;
       setFetchStatus("ready");
     } catch (err) {
       setCatalog([]);
+      setSiemOverview(null);
       setFetchError(normalizeSocError(err).message ?? "Audit feed unavailable.");
       setFetchStatus("error");
     }
@@ -166,12 +176,16 @@ export function useAuditCenterLogs(options = {}) {
 
   const pollStream = useCallback(async () => {
     try {
-      const packet = await socApi.auditLogsStream();
+      const packet = await socApi.auditLogsStream(streamSinceRef.current);
       const events = Array.isArray(packet.events) ? packet.events : [];
       if (!events.length) return false;
 
       setCatalog((prev) => {
         const next = mergeAuditFeed(prev, events);
+        const maxTs = next.reduce((mx, r) => Math.max(mx, Date.parse(r.timestamp) || 0), 0);
+        if (maxTs > 0) {
+          streamSinceRef.current = new Date(maxTs).toISOString();
+        }
         const prevIds = new Set(prev.map((p) => p.id));
         const freshIds = events.filter((e) => !prevIds.has(e.id)).map((e) => e.id);
         streamBatchRef.current = {
@@ -365,5 +379,6 @@ export function useAuditCenterLogs(options = {}) {
     blockIpForLog,
     markAsIncident,
     addToInvestigation,
+    siemOverview,
   };
 }

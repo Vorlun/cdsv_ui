@@ -107,10 +107,24 @@ function useAuthCoordinator() {
         const next = await rotateRefreshTokens(envelope.refreshToken);
         if (cancelled) return;
 
+        // Prefer the role returned by the refresh endpoint (new format).
+        // Fall back to the persisted envelope role for backward compatibility.
+        const resolvedRole = next?.role ?? envelope.role;
+
+        // Safety check: if the persisted session claims admin but the refresh
+        // token returned a non-admin identity, clear and force re-login.
+        // This guards against stale legacy refresh tokens issued before the
+        // role-embedding fix.
+        if (envelope.role === "admin" && resolvedRole !== "admin") {
+          teardownSession();
+          if (!cancelled) setHydrated(true);
+          return;
+        }
+
         establishSession(next, {
           rememberMe: envelope.rememberMe,
           user: envelope.user,
-          role: envelope.role,
+          role: resolvedRole,
         });
       } catch {
         teardownSession();
@@ -125,6 +139,14 @@ function useAuthCoordinator() {
       cancelled = true;
     };
   }, [establishSession, teardownSession]);
+
+  useEffect(() => {
+    const onUnauthorized = () => {
+      teardownSession();
+    };
+    window.addEventListener("cdsv:auth:unauthorized", onUnauthorized);
+    return () => window.removeEventListener("cdsv:auth:unauthorized", onUnauthorized);
+  }, [teardownSession]);
 
   const login = useCallback(
     async ({ email, password, rememberMe }) => {
@@ -146,20 +168,15 @@ function useAuthCoordinator() {
     [establishSession],
   );
 
-  const register = useCallback(async ({ email, fullName }) => {
+  const register = useCallback(async ({ email, fullName, password }) => {
     try {
-      const created = await registerUser({ email, fullName });
-      establishSession(created, {
-        rememberMe: false,
-        user: created.user,
-        role: created.role ?? "user",
-      });
-      return { ok: true, role: created.role ?? "user" };
+      await registerUser({ email, fullName, password });
+      return { ok: true };
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Registration failed.";
       return { ok: false, error: message };
     }
-  }, [establishSession]);
+  }, []);
 
   const updateSessionUser = useCallback((patch) => {
     const env = readPersistedSession();

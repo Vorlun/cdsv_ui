@@ -3,7 +3,7 @@ import { socApi, subscribeSocStream } from "@/services/apiClient";
 import { normalizeSocError } from "@/services/apiErrorHandler";
 
 /**
- * Telecom SOAR dashboard: GET /soar/snapshot + SOC stream fan-out (same `liveLogs` as SIEM Logs).
+ * Telecom SOAR dashboard: GET /soar/snapshot + telemetry socket debounce + interval poll.
  */
 export function useSoarIncidentCenter(options = {}) {
   const streamIntervalMs = options.streamIntervalMs ?? 5500;
@@ -28,17 +28,37 @@ export function useSoarIncidentCenter(options = {}) {
     }
   }, []);
 
+  const silentReload = useCallback(async () => {
+    try {
+      const s = await socApi.soarSnapshot();
+      setSnapshot(s);
+      setError(null);
+      setStatus((prev) => (prev === "error" ? "ready" : prev));
+    } catch (err) {
+      setError(normalizeSocError(err).message ?? "SOAR gateway unavailable.");
+      setStatus("error");
+    }
+  }, []);
+
   useEffect(() => {
     void load();
   }, [load]);
 
   useEffect(() => {
     if (status !== "ready") return undefined;
-    const off = subscribeSocStream((pulse) => {
-      if (pulse.soarSnapshot) setSnapshot(pulse.soarSnapshot);
-    }, streamIntervalMs);
-    return off;
-  }, [status, streamIntervalMs]);
+    let debounceT = null;
+    const bump = () => {
+      if (debounceT) window.clearTimeout(debounceT);
+      debounceT = window.setTimeout(() => void silentReload(), 420);
+    };
+    const off = subscribeSocStream(bump);
+    const iv = window.setInterval(() => void silentReload(), streamIntervalMs);
+    return () => {
+      off();
+      window.clearInterval(iv);
+      if (debounceT) window.clearTimeout(debounceT);
+    };
+  }, [status, streamIntervalMs, silentReload]);
 
   const runAction = useCallback(async (incidentId, action, actor, extras = {}) => {
     const key = `${incidentId}-${action}`;

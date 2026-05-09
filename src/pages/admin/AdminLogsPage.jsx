@@ -17,8 +17,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  Line,
-  LineChart,
+  Legend,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -33,6 +32,7 @@ import { useAuth } from "@/features/auth/context/AuthContext";
 import { useAuditCenterLogs } from "@/hooks/useAuditCenterLogs";
 import { useGovernanceConsole } from "@/hooks/useGovernanceConsole";
 import { normalizeSocError } from "@/services/apiErrorHandler";
+import { socApi } from "@/services/apiClient";
 import { formatDisplayTimestamp } from "@/utils/auditLogSchema";
 import { sanitizePlainText } from "@/utils/sanitize";
 import { buildSocUiGates, normalizeSocRole } from "@/utils/socPermissions";
@@ -133,7 +133,30 @@ export default function AdminLogsPage() {
     isEmptyFiltered,
     isEmptyCatalog,
     burstTicker,
+    siemOverview,
   } = useAuditCenterLogs({ streamPollMs: 3400, socRole: socPersona, actorPrincipal });
+
+  const [eventDetail, setEventDetail] = useState(null);
+
+  useEffect(() => {
+    if (!selectedLog?.id) {
+      setEventDetail(null);
+      return undefined;
+    }
+    let cancelled = false;
+    setEventDetail(null);
+    socApi
+      .logsEventDetail(selectedLog.id)
+      .then((payload) => {
+        if (!cancelled) setEventDetail(payload && typeof payload === "object" ? payload : null);
+      })
+      .catch(() => {
+        if (!cancelled) setEventDetail(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedLog?.id]);
 
   useEffect(() => {
     if (!autoScroll || !liveStream) return;
@@ -147,39 +170,67 @@ export default function AdminLogsPage() {
     window.setTimeout(() => setToast(""), 2400);
   };
 
-  const loginTrend = useMemo(() => {
+  const volumeSeries = useMemo(() => {
+    const vs = siemOverview?.volumeSeries;
+    if (Array.isArray(vs) && vs.length > 0) return vs;
     const buckets = new Map();
     catalog.forEach((log) => {
       const ts = Date.parse(log.timestamp);
       if (Number.isNaN(ts)) return;
       const d = new Date(ts);
-      const label = `${String(d.getHours()).padStart(2, "0")}:00`;
-      buckets.set(label, (buckets.get(label) ?? 0) + 1);
+      const name = `${String(d.getHours()).padStart(2, "0")}:00`;
+      const row =
+        buckets.get(name) ??
+        ({
+          name,
+          auth: 0,
+          upload: 0,
+          telemetry: 0,
+          ai: 0,
+          threat: 0,
+          api: 0,
+          total: 0,
+        });
+      const cat = log.meta?.category ?? "telemetry";
+      if (cat === "auth") row.auth += 1;
+      else if (cat === "upload") row.upload += 1;
+      else if (cat === "telemetry") row.telemetry += 1;
+      else if (cat === "ai") row.ai += 1;
+      else if (cat === "threat") row.threat += 1;
+      else if (cat === "api") row.api += 1;
+      else row.telemetry += 1;
+      row.total += 1;
+      buckets.set(name, row);
     });
-    const pairs = [...buckets.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-    if (!pairs.length) {
-      return [
-        { name: "08:00", value: 12 },
-        { name: "10:00", value: 18 },
-        { name: "12:00", value: 26 },
-      ];
-    }
-    return pairs.map(([name, value]) => ({ name, value }));
-  }, [catalog]);
+    return [...buckets.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([, v]) => v);
+  }, [siemOverview, catalog]);
 
-  const suspiciousIps = useMemo(() => {
+  const blockedChartRows = useMemo(() => {
+    const src = siemOverview?.blockedSources;
+    if (Array.isArray(src) && src.length > 0) {
+      return src.map((s) => ({
+        ip: s.ip,
+        hits: Number(s.requests ?? s.hits ?? 0),
+        country: s.country ?? "",
+        severity: s.severity ?? "",
+        reason: s.denyReason ?? "",
+      }));
+    }
     const counts = new Map();
     catalog.forEach((log) => {
       if (!/blocked|denied/i.test(log.result)) return;
+      if (!log.ip) return;
       counts.set(log.ip, (counts.get(log.ip) ?? 0) + 1);
     });
     return [...counts.entries()]
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
-      .map(([ip, hits]) => ({ ip, hits }));
-  }, [catalog]);
+      .slice(0, 14)
+      .map(([ip, hits]) => ({ ip, hits, country: "", severity: "", reason: "" }));
+  }, [siemOverview, catalog]);
 
-  const geoAttackSources = useMemo(() => {
+  const geoRows = useMemo(() => {
+    const g = siemOverview?.geography;
+    if (Array.isArray(g) && g.length > 0) return g;
     const counts = new Map();
     catalog.forEach((log) => {
       if (log.severity !== "Critical" && log.severity !== "High") return;
@@ -187,38 +238,92 @@ export default function AdminLogsPage() {
     });
     return [...counts.entries()]
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 6)
-      .map(([country, incidents]) => ({ country, incidents }));
-  }, [catalog]);
+      .slice(0, 8)
+      .map(([country, incidents]) => ({
+        country,
+        blocked: 0,
+        authStress: 0,
+        uploads: 0,
+        severityScore: incidents,
+      }));
+  }, [siemOverview, catalog]);
 
-  const resultDistribution = useMemo(() => {
-    const success = catalog.filter((item) => item.result === "Success").length;
-    const failed = catalog.filter((item) => item.result === "Failed").length;
-    const blocked = catalog.filter((item) => item.result === "Blocked" || item.result === "Denied").length;
-    return [
-      { name: "Success", value: success, color: "#10B981" },
-      { name: "Failed", value: failed, color: "#F59E0B" },
-      { name: "Blocked / Denied", value: blocked, color: "#EF4444" },
-    ];
-  }, [catalog]);
+  const dispositionSlices = useMemo(() => {
+    const d = siemOverview?.disposition;
+    if (Array.isArray(d) && d.some((x) => Number(x.value) > 0)) return d;
+    const allowed = catalog.filter((item) => item.result === "Success").length;
+    const investigating = catalog.filter((item) => item.result === "Failed").length;
+    const blocked = catalog.filter((item) => item.result === "Blocked").length;
+    const escalated = catalog.filter((item) => item.result === "Denied").length;
+    const slices = [
+      { name: "Allowed", value: allowed, color: "#10B981" },
+      { name: "Investigating", value: investigating, color: "#38BDF8" },
+      { name: "Blocked", value: blocked, color: "#EF4444" },
+      { name: "Escalated", value: escalated, color: "#F97316" },
+    ].filter((s) => s.value > 0);
+    return slices.length ? slices : [{ name: "No disposition in window", value: 1, color: "#475569" }];
+  }, [siemOverview, catalog]);
 
   const metrics = useMemo(() => {
+    const m = siemOverview?.metrics;
+    if (m && typeof m === "object") {
+      const d = m.deltas ?? {};
+      const ingest = m.ingestVelocityPerMin;
+      const win = m.rollingWindowLabel ?? "24h rolling";
+      const foot = `${win} · velocity ~${ingest ?? "—"} evt/min`;
+      return [
+        {
+          label: "Indexed Events",
+          value: m.indexedEvents ?? 0,
+          trend: d.indexedEvents ?? "—",
+          icon: ShieldCheck,
+          color: "text-[#93C5FD]",
+          foot,
+        },
+        {
+          label: "Failed Attempts",
+          value: m.failedAttempts ?? 0,
+          trend: d.failedAttempts ?? "—",
+          icon: AlertTriangle,
+          color: "text-[#FDE68A]",
+          foot,
+        },
+        {
+          label: "Enforcement Blocks",
+          value: m.enforcementBlocks ?? 0,
+          trend: d.enforcementBlocks ?? "—",
+          icon: Ban,
+          color: "text-[#FCA5A5]",
+          foot,
+        },
+        {
+          label: "Critical Severity",
+          value: m.criticalSeverity ?? 0,
+          trend: d.criticalSeverity ?? "—",
+          icon: ShieldAlert,
+          color: "text-[#F97316]",
+          foot,
+        },
+      ];
+    }
     const failed = catalog.filter((item) => item.result === "Failed").length;
     const blocked = catalog.filter((item) => item.result === "Blocked" || item.result === "Denied").length;
     const critical = catalog.filter((item) => item.severity === "Critical").length;
+    const foot = "Northbound KPIs offline — showing rolling buffer facets";
     return [
       {
         label: "Indexed Events",
         value: catalog.length,
-        trend: "+12%",
+        trend: "—",
         icon: ShieldCheck,
         color: "text-[#93C5FD]",
+        foot,
       },
-      { label: "Failed Attempts", value: failed, trend: "+4%", icon: AlertTriangle, color: "text-[#FDE68A]" },
-      { label: "Enforcement Blocks", value: blocked, trend: "+7%", icon: Ban, color: "text-[#FCA5A5]" },
-      { label: "Critical Severity", value: critical, trend: "+2%", icon: ShieldAlert, color: "text-[#F97316]" },
+      { label: "Failed Attempts", value: failed, trend: "—", icon: AlertTriangle, color: "text-[#FDE68A]", foot },
+      { label: "Enforcement Blocks", value: blocked, trend: "—", icon: Ban, color: "text-[#FCA5A5]", foot },
+      { label: "Critical Severity", value: critical, trend: "—", icon: ShieldAlert, color: "text-[#F97316]", foot },
     ];
-  }, [catalog]);
+  }, [siemOverview, catalog]);
 
   const clearFilters = () => {
     setQuery("");
@@ -310,7 +415,8 @@ export default function AdminLogsPage() {
                 <div className="text-3xl font-bold text-white">
                   {loading ? "—" : <AnimatedCount value={metric.value} />}
                 </div>
-                <div className="mt-1 text-xs text-[#6EE7B7]">{metric.trend} from previous cycle</div>
+                <div className="mt-1 text-xs text-[#6EE7B7]">{sanitizePlainText(metric.trend, 16)} Δ vs prior window</div>
+                <div className="mt-0.5 text-[10px] leading-snug text-[#64748B]">{sanitizePlainText(metric.foot ?? "", 160)}</div>
               </motion.div>
             );
           })}
@@ -318,18 +424,29 @@ export default function AdminLogsPage() {
 
         <section className="grid gap-4 xl:grid-cols-2">
           <div className="rounded-2xl border border-white/10 bg-[#111827]/95 p-4">
-            <div className="mb-3 text-sm font-semibold text-[#E5E7EB]">Event Volume by Hour (indexed)</div>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm font-semibold text-[#E5E7EB]">
+              <span>Event volume (stacked · UTC buckets)</span>
+              <span className="text-xs font-normal text-[#64748B]">
+                auth · uploads · telemetry · AI · threat · API
+              </span>
+            </div>
             <div className="h-52">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={loginTrend}>
+                <BarChart data={volumeSeries.length ? volumeSeries : [{ name: "—", auth: 0, upload: 0, telemetry: 0, ai: 0, threat: 0, api: 0, total: 0 }]}>
                   <CartesianGrid stroke="rgba(148,163,184,0.12)" vertical={false} />
-                  <XAxis dataKey="name" stroke="#64748B" />
-                  <YAxis stroke="#64748B" />
+                  <XAxis dataKey="name" stroke="#64748B" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
+                  <YAxis stroke="#64748B" tick={{ fontSize: 10 }} width={36} />
                   <Tooltip
                     contentStyle={{ background: "#0B1220", border: "1px solid rgba(59,130,246,0.3)", borderRadius: 10 }}
                   />
-                  <Line type="monotone" dataKey="value" stroke="#3B82F6" strokeWidth={2.5} dot={false} />
-                </LineChart>
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Bar dataKey="auth" stackId="v" fill="#3B82F6" name="Auth" maxBarSize={28} />
+                  <Bar dataKey="upload" stackId="v" fill="#22D3EE" name="Upload" maxBarSize={28} />
+                  <Bar dataKey="telemetry" stackId="v" fill="#6366F1" name="Telemetry" maxBarSize={28} />
+                  <Bar dataKey="ai" stackId="v" fill="#A78BFA" name="AI" maxBarSize={28} />
+                  <Bar dataKey="threat" stackId="v" fill="#F97316" name="Threat" maxBarSize={28} />
+                  <Bar dataKey="api" stackId="v" fill="#F43F5E" name="API" maxBarSize={28} />
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
@@ -338,8 +455,8 @@ export default function AdminLogsPage() {
             <div className="h-52">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={resultDistribution} dataKey="value" innerRadius={50} outerRadius={82} paddingAngle={3}>
-                    {resultDistribution.map((entry) => (
+                  <Pie data={dispositionSlices} dataKey="value" innerRadius={50} outerRadius={82} paddingAngle={3}>
+                    {dispositionSlices.map((entry) => (
                       <Cell key={entry.name} fill={entry.color} />
                     ))}
                   </Pie>
@@ -355,12 +472,19 @@ export default function AdminLogsPage() {
         <section className="grid gap-4 xl:grid-cols-2">
           <div className="rounded-2xl border border-white/10 bg-[#111827]/95 p-4">
             <div className="mb-1 text-sm font-semibold text-[#E5E7EB]">Top Blocked / Denied Sources</div>
-            <div className="mb-3 text-xs text-[#64748B]">Auto-derived from current SIEM buffer</div>
+            <div className="mb-3 text-xs text-[#64748B]">Northbound enforcement intelligence · POST /logs/filter for exports</div>
             <div className="h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={suspiciousIps.length ? suspiciousIps : [{ ip: "—", hits: 0 }]} barCategoryGap={14}>
+                <BarChart
+                  data={
+                    blockedChartRows.length
+                      ? blockedChartRows
+                      : [{ ip: "No blocked sources in window", hits: 0, country: "", reason: "" }]
+                  }
+                  barCategoryGap={14}
+                >
                   <CartesianGrid stroke="rgba(148,163,184,0.1)" vertical={false} />
-                  <XAxis dataKey="ip" stroke="#64748B" tick={{ fontSize: 11 }} />
+                  <XAxis dataKey="ip" stroke="#64748B" tick={{ fontSize: 10 }} />
                   <YAxis stroke="#64748B" tick={{ fontSize: 11 }} width={32} />
                   <Tooltip
                     contentStyle={{ background: "#0B1220", border: "1px solid rgba(59,130,246,0.3)", borderRadius: 10 }}
@@ -381,24 +505,33 @@ export default function AdminLogsPage() {
             <div className="mb-1 text-sm font-semibold text-[#E5E7EB]">High / Critical Geographies</div>
             <div className="mb-3 text-xs text-[#64748B]">Correlated to severity labels in-buffer</div>
             <div className="h-[220px] space-y-2 overflow-y-auto pr-1">
-              {(geoAttackSources.length ? geoAttackSources : [{ country: "No high-severity in view", incidents: 0 }]).map(
-                (item) => (
+              {(geoRows.length ? geoRows : [{ country: "No elevated geography in window", severityScore: 0 }]).map((item) => {
+                const maxScore = Math.max(1, ...geoRows.map((g) => Number(g.severityScore) || 0));
+                return (
                   <div key={item.country} className="rounded-lg border border-white/10 bg-[#0F172A]/75 px-3 py-2">
-                    <div className="mb-1 flex items-center justify-between text-sm">
+                    <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-sm">
                       <span className="text-[#D1D5DB]">{sanitizePlainText(item.country, 120)}</span>
-                      <span className="text-xs text-[#93C5FD]">{item.incidents} hits</span>
+                      <span className="text-xs text-[#93C5FD]">
+                        score {item.severityScore ?? 0} · blk {item.blocked ?? 0} · auth Δ {item.authStress ?? 0}
+                      </span>
                     </div>
                     <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
                       <motion.div
                         initial={{ width: 0 }}
-                        animate={{ width: `${Math.min(100, (item.incidents / 12) * 100)}%` }}
+                        animate={{
+                          width: `${Math.min(100, ((Number(item.severityScore) || 0) / maxScore) * 100)}%`,
+                        }}
                         transition={{ duration: 0.35 }}
-                        className="h-full rounded-full bg-gradient-to-r from-[#22D3EE] to-[#2563EB]"
+                        className={`h-full rounded-full ${
+                          (Number(item.severityScore) || 0) >= 6
+                            ? "bg-gradient-to-r from-[#F97316] to-[#EF4444]"
+                            : "bg-gradient-to-r from-[#22D3EE] to-[#2563EB]"
+                        }`}
                       />
                     </div>
                   </div>
-                ),
-              )}
+                );
+              })}
             </div>
           </div>
         </section>
@@ -499,7 +632,7 @@ export default function AdminLogsPage() {
                   }}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-[#D1D5DB] transition hover:border-[#3B82F6]/35"
                 >
-                  <RefreshCw className="h-4 w-4" /> Resync GET /logs
+                  <RefreshCw className="h-4 w-4" /> Resync /logs/feed
                 </button>
                 <button
                   type="button"
@@ -542,7 +675,7 @@ export default function AdminLogsPage() {
           {loading && isEmptyCatalog ? (
             <div className="flex flex-col items-center justify-center gap-3 p-10 text-[#94A3B8]">
               <Loader2 className="h-10 w-10 animate-spin text-[#38BDF8]" aria-hidden />
-              <p className="text-sm">Hydrating SIEM corpus from GET /logs…</p>
+              <p className="text-sm">Hydrating SIEM corpus from GET /logs/feed…</p>
             </div>
           ) : isEmptyCatalog ? (
             <div className="p-6">
@@ -627,7 +760,7 @@ export default function AdminLogsPage() {
                   <strong className="text-[#CBD5F5]">{filteredRows.length}</strong> filtered rows · buffer{" "}
                   <strong className="text-[#CBD5F5]">{catalog.length}</strong>
                 </span>
-                <span>GET /logs · GET /logs/stream · POST /logs/filter · POST /logs/action</span>
+                <span>GET /logs/feed · GET /logs/stream · POST /logs/filter · POST /logs/action</span>
               </div>
             </>
           )}
@@ -708,6 +841,29 @@ export default function AdminLogsPage() {
                         </div>
                         <div>Severity: {sanitizePlainText(selectedLog.severity, 24)}</div>
                       </div>
+
+                      <div className="rounded-lg border border-white/10 bg-[#111827]/70 p-3 text-[#D1D5DB]">
+                        <div>
+                          Category:{" "}
+                          <span className="text-[#BFDBFE]">
+                            {sanitizePlainText(selectedLog.meta?.category ?? "—", 32)}
+                          </span>
+                        </div>
+                        <div>
+                          Source:{" "}
+                          <span className="text-[#BFDBFE]">
+                            {sanitizePlainText(selectedLog.meta?.sourceType ?? "—", 48)}
+                          </span>
+                        </div>
+                        <div className="mt-2 text-xs text-[#94A3B8] break-all">
+                          {sanitizePlainText(selectedLog.meta?.payloadPreview ?? "", 320)}
+                        </div>
+                        {eventDetail?.correlation?.narrative ? (
+                          <div className="mt-2 text-xs text-[#A5B4FC]">
+                            {sanitizePlainText(String(eventDetail.correlation.narrative), 400)}
+                          </div>
+                        ) : null}
+                      </div>
                       <div className="rounded-lg border border-white/10 bg-[#111827]/70 p-3 text-[#D1D5DB]">
                         <div className="inline-flex items-center gap-1">
                           <LocateFixed className="h-4 w-4 text-[#93C5FD]" /> Geo:
@@ -732,13 +888,29 @@ export default function AdminLogsPage() {
                       <div className="rounded-lg border border-white/10 bg-[#111827]/70 p-3">
                         <div className="mb-2 text-xs uppercase tracking-wide text-[#94A3B8]">Operator risk index</div>
                         <div className="flex items-center justify-between">
-                          <div className="text-sm text-[#D1D5DB]">Derived from severity + disposition (simulated SIEM score)</div>
-                          <RiskGauge score={selectedLog.meta?.risk ?? 50} />
+                          <div className="text-sm text-[#D1D5DB]">
+                            Severity-weighted risk index from unified SIEM mapper (deterministic per event id).
+                          </div>
+                          <RiskGauge score={eventDetail?.threatScore ?? selectedLog.meta?.risk ?? 50} />
                         </div>
                       </div>
-                      <div className="rounded-lg border border-white/10 bg-[#111827]/70 p-3 text-xs text-[#9CA3AF]">
-                        <div>- ASN reputation cross-check (mock)</div>
-                        <div>- Device posture vs. corporate MDM profile</div>
+                      <div className="rounded-lg border border-white/10 bg-[#111827]/70 p-3 text-xs text-[#9CA3AF] space-y-2">
+                        <div className="uppercase tracking-wide text-[#94A3B8]">Correlation console</div>
+                        <div>{sanitizePlainText(eventDetail?.correlation?.narrative ?? "", 420)}</div>
+                        {!eventDetail?.correlation?.narrative && correlation.byId?.[selectedLog.id]?.patternTier ? (
+                          <div className="text-[#94A3B8]">
+                            Buffer heuristic ·{" "}
+                            {sanitizePlainText(correlation.byId?.[selectedLog.id]?.patternTier ?? "", 120)}
+                          </div>
+                        ) : null}
+                        {Array.isArray(eventDetail?.correlation?.modules) ? (
+                          <div className="font-mono text-[11px] text-[#BFDBFE]">
+                            {eventDetail.correlation.modules.slice(0, 6).join(" · ")}
+                          </div>
+                        ) : null}
+                        <pre className="max-h-40 overflow-auto rounded border border-white/10 bg-black/40 p-2 text-[10px] text-[#CBD5E1]">
+                          {sanitizePlainText(JSON.stringify(eventDetail?.headers ?? {}, null, 2), 2400)}
+                        </pre>
                       </div>
                     </motion.div>
                   )}

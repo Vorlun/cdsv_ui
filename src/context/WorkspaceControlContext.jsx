@@ -108,8 +108,9 @@ export function WorkspaceControlProvider({ children }) {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    document.body.style.background = theme === "light" ? "#f1f5f9" : "#0b0f1a";
+    document.body.style.background = theme === "light" ? "#eef2f7" : "#0b0f1a";
     document.body.style.color = theme === "light" ? "#0f172a" : "#e5e7eb";
+    document.body.style.transition = "background-color 0.3s, color 0.3s";
     try {
       window.localStorage.setItem(THEME_KEY, theme);
     } catch {

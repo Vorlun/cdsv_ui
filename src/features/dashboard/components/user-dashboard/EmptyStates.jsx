@@ -22,7 +22,7 @@ export function EmptyStateCompact({ isLight }) {
         isLight ? "border-slate-300 text-slate-600" : "border-white/15 text-[#94a3b8]"
       }`}
     >
-      No catalogued files yet — upload to seed triage metrics.
+      No audit events recorded yet — secure ingestion telemetry will initialize after first upload.
     </p>
   );
 }
